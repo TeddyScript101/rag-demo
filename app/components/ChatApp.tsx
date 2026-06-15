@@ -465,9 +465,9 @@ export default function ChatApp({ chatId }: { chatId?: string }) {
           </div>
         </div>
 
-        {/* Right: Document viewer panel */}
+        {/* Right: Document viewer panel — desktop only */}
         {activeDoc && (
-          <div className="w-[45%] border-l border-slate-800 flex flex-col flex-shrink-0">
+          <div className="hidden md:flex w-[45%] border-l border-slate-800 flex-col flex-shrink-0">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 flex-shrink-0">
               <span className="text-xs text-slate-300 font-medium truncate">
                 {activeDoc}
@@ -478,6 +478,39 @@ export default function ChatApp({ chatId }: { chatId?: string }) {
                 aria-label="Close"
               >
                 ×
+              </button>
+            </div>
+            {activeDocType === "pdf" ? (
+              <iframe
+                key={activeDoc}
+                src={`/api/document/${encodeURIComponent(activeDoc)}`}
+                className="flex-1 w-full bg-white"
+                title={activeDoc}
+              />
+            ) : (
+              <iframe
+                key={activeDoc}
+                src={`/doc-preview?name=${encodeURIComponent(activeDoc)}`}
+                className="flex-1 w-full"
+                title={activeDoc}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Mobile fullscreen doc viewer */}
+        {activeDoc && (
+          <div className="md:hidden fixed inset-0 z-50 flex flex-col bg-[#070d1a]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 flex-shrink-0">
+              <span className="text-xs text-slate-300 font-medium truncate flex-1 mr-3">
+                {activeDoc}
+              </span>
+              <button
+                onClick={() => setActiveDoc(null)}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors flex-shrink-0"
+                aria-label="Close"
+              >
+                ← Back to chat
               </button>
             </div>
             {activeDocType === "pdf" ? (
