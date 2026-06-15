@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const { message, mode } = await req.json();
 
   if (!process.env.GROQ_API_KEY) {
-    return new Response("GROQ_API_KEY not set in .env.local", { status: 500 });
+    return new Response("api_key_missing", { status: 503 });
   }
 
   // ─── STEP 1: RETRIEVAL ────────────────────────────────────────────────────
@@ -84,14 +84,25 @@ export async function POST(req: NextRequest) {
   // full response.
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-  const result = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: message },
-    ],
-    stream: true,
-  });
+  let result;
+  try {
+    result = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message },
+      ],
+      stream: true,
+    });
+  } catch (err) {
+    if (err instanceof Groq.APIError && err.status === 429) {
+      return new Response("quota_exceeded", { status: 429 });
+    }
+    return new Response(
+      `Groq error: ${err instanceof Error ? err.message : String(err)}`,
+      { status: 502 }
+    );
+  }
 
   // Pass document order to the frontend so [1], [2] citations can be mapped
   // to human-readable filenames in the "Sources" panel.

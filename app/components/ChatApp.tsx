@@ -180,7 +180,12 @@ export default function ChatApp({ chatId }: { chatId?: string }) {
         body: JSON.stringify({ message: userMessage, mode: currentMode }),
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const body = await res.text();
+        if (res.status === 429 || body === "quota_exceeded") throw new Error("__quota__");
+        if (res.status === 503 || body === "api_key_missing") throw new Error("__no_key__");
+        throw new Error(body);
+      }
 
       const docNames = (res.headers.get("X-Document-Names") || "")
         .split("\n")
@@ -218,10 +223,16 @@ export default function ChatApp({ chatId }: { chatId?: string }) {
         },
       ]);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
+      const raw = err instanceof Error ? err.message : "Unknown error";
+      const isQuota = raw === "__quota__";
+      const isNoKey = raw === "__no_key__";
+      const content =
+        isQuota || isNoKey
+          ? `⚠️ ${isQuota ? "API quota exhausted." : "API key not configured."} View the [pre-loaded demo](/chat/demo) instead.`
+          : `⚠️ ${raw}`;
       setter((prev) => [
         ...prev.slice(0, -1),
-        { role: "assistant", content: `⚠️ ${msg}` },
+        { role: "assistant", content },
       ]);
     } finally {
       setIsStreaming(false);
