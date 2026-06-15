@@ -4,23 +4,16 @@ A full-stack computer vision SaaS platform for analyzing basketball shooting mec
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       Browser Client                        │
-│  Next.js 15 + TypeScript + Tailwind + Recharts             │
-│  FFmpeg.wasm (in-browser video trimming)                    │
-└───────────────────────┬─────────────────────────────────────┘
-                        │ REST API
-┌───────────────────────▼─────────────────────────────────────┐
-│                    FastAPI Backend                           │
-│  JWT Auth · Video Upload · Background CV Analysis          │
-│  MediaPipe Pose · OpenCV · SQLAlchemy async               │
-└────────────┬──────────────────────────┬─────────────────────┘
-             │                          │
-      ┌──────▼──────┐          ┌────────▼───────┐
-      │ PostgreSQL  │          │  Local Storage │
-      │  (Docker)   │          │  /uploads/     │
-      └─────────────┘          └────────────────┘
+```mermaid
+flowchart TD
+    BC["Browser Client\nNext.js + TypeScript\nTailwind + FFmpeg.wasm"]
+    BE["FastAPI Backend\nJWT + MediaPipe + OpenCV\nSQLAlchemy async"]
+    DB[("PostgreSQL\nDocker")]
+    FS["Local Storage\n/uploads/"]
+
+    BC -->|REST API| BE
+    BE --> DB
+    BE --> FS
 ```
 
 ## Tech Stack

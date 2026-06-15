@@ -18,7 +18,12 @@ function MermaidBlock({ code }: { code: string }) {
       mermaid
         .render(id, code)
         .then(({ svg: rendered }) => {
-          if (!cancelled) setSvg(rendered);
+          if (!cancelled) {
+            const responsive = rendered
+              .replace(/\bwidth="[\d.]+(?:px)?"/i, 'width="100%"')
+              .replace(/\bheight="[\d.]+(?:px)?"/i, 'height="auto"');
+            setSvg(responsive);
+          }
         })
         .catch((err) => {
           if (!cancelled) setError(String(err));
@@ -39,7 +44,7 @@ function MermaidBlock({ code }: { code: string }) {
   return (
     <div
       dangerouslySetInnerHTML={{ __html: svg }}
-      className="my-4 flex justify-center"
+      className="my-4 flex justify-center overflow-x-auto [&>svg]:max-w-full [&>svg]:h-auto"
     />
   );
 }
