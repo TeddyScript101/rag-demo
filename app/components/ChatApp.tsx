@@ -93,6 +93,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
+  isError?: boolean;
 }
 
 function parseSources(text: string, docNames: string[]): Source[] {
@@ -184,7 +185,7 @@ export default function ChatApp({ chatId }: { chatId?: string }) {
         const body = await res.text();
         if (res.status === 429 || body === "quota_exceeded") throw new Error("__quota__");
         if (res.status === 503 || body === "api_key_missing") throw new Error("__no_key__");
-        throw new Error(body);
+        throw new Error(body || `Server error (${res.status})`);
       }
 
       const docNames = (res.headers.get("X-Document-Names") || "")
@@ -232,7 +233,7 @@ export default function ChatApp({ chatId }: { chatId?: string }) {
           : `⚠️ ${raw}`;
       setter((prev) => [
         ...prev.slice(0, -1),
-        { role: "assistant", content },
+        { role: "assistant", content, isError: true },
       ]);
     } finally {
       setIsStreaming(false);
@@ -349,6 +350,12 @@ export default function ChatApp({ chatId }: { chatId?: string }) {
                     >
                       {msg.role === "user" ? (
                         msg.content
+                      ) : msg.isError ? (
+                        <div className="prose prose-sm prose-invert max-w-none prose-p:my-1.5 [&_a]:text-blue-400 [&_a:hover]:text-blue-300 text-yellow-400">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
                       ) : msg.content ? (
                         <div className="prose prose-sm prose-invert max-w-none prose-p:my-1.5 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-ul:my-1.5 prose-li:my-0.5">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>

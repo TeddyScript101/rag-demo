@@ -9,7 +9,12 @@ const pdfParse = require("pdf-parse/lib/pdf-parse.js");
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const { message, mode } = await req.json();
+  let message: string, mode: string;
+  try {
+    ({ message, mode } = await req.json());
+  } catch {
+    return new Response("Invalid request body", { status: 400 });
+  }
 
   if (!process.env.GROQ_API_KEY) {
     return new Response("api_key_missing", { status: 503 });
@@ -41,21 +46,29 @@ export async function POST(req: NextRequest) {
   // Covers resume summary + skills + full work experience comfortably.
   const MAX_CHARS_PER_DOC = 6000;
 
-  const documents = await Promise.all(
-    files.map(async (filename) => {
-      const filepath = path.join(dataDir, filename);
-      const name = filename.replace(/\.(md|pdf)$/, "");
-      let content: string;
-      if (filename.endsWith(".pdf")) {
-        const buffer = fs.readFileSync(filepath);
-        const { text } = await pdfParse(buffer);
-        content = text as string;
-      } else {
-        content = fs.readFileSync(filepath, "utf-8");
-      }
-      return { name, content: content.slice(0, MAX_CHARS_PER_DOC) };
-    })
-  );
+  let documents: { name: string; content: string }[];
+  try {
+    documents = await Promise.all(
+      files.map(async (filename) => {
+        const filepath = path.join(dataDir, filename);
+        const name = filename.replace(/\.(md|pdf)$/, "");
+        let content: string;
+        if (filename.endsWith(".pdf")) {
+          const buffer = fs.readFileSync(filepath);
+          const { text } = await pdfParse(buffer);
+          content = text as string;
+        } else {
+          content = fs.readFileSync(filepath, "utf-8");
+        }
+        return { name, content: content.slice(0, MAX_CHARS_PER_DOC) };
+      })
+    );
+  } catch (err) {
+    return new Response(
+      `Failed to load documents: ${err instanceof Error ? err.message : String(err)}`,
+      { status: 500 }
+    );
+  }
 
   // ─── STEP 2: AUGMENTATION ────────────────────────────────────────────────
   // Inject retrieved documents into the system prompt as numbered context blocks.
